@@ -1,22 +1,27 @@
 # SQLMap Scout
 
-A terminal-based, signal-only web crawler that identifies parameterized URLs and dynamic forms in an authorized target.
+A terminal-first reconnaissance crawler that finds parameterized URLs and dynamic forms on an authorized target.
 
-## Preview the landing page
+## Landing page
 
-Open `index.html` directly in a browser, or serve the branch locally:
+Open `index.html` directly or serve it locally:
 
 ```bash
 python -m http.server 4173
 ```
 
-Then visit `http://localhost:4173`.
+Visit `http://localhost:4173`.
 
-## Run the crawler
+## Install
 
 ```bash
 pip install rich
-python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export
+```
+
+## Run
+
+```bash
+python sqlmap_scout.py -u https://example.com --max-depth 2 --max-pages 80 --concurrency 6 --auto-export
 ```
 
 Use SQLMap Scout only against systems you own or have explicit permission to test.
