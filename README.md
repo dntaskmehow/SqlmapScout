@@ -20,8 +20,6 @@ python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export
 
 ```bash
 
-python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export
-
 python sqlmap_scout.py -u https://example.com --max-pages 80 --links-only
 
 python sqlmap_scout.py -u https://example.com --max-pages 80 --with-commands
