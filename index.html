@@ -3,184 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07110e">
-  <meta name="description" content="SQLMap Scout crawls a target, identifies parameterized and dynamic endpoints, and exports clean targets for focused SQLMap testing.">
-  <title>SQLMap Scout — Focus the signal</title>
+  <meta name="theme-color" content="#080b0a">
+  <meta name="description" content="SQLMap Scout — a same-origin reconnaissance crawler that discovers parameterized URLs and dynamic forms for focused authorized SQLMap testing.">
+  <title>SQLMap Scout — Signal before exploitation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --ink: #07110e; --paper: #f2f4ea; --surface: #fcfdf7;
-      --lime: #b8f35a; --lime-deep: #73a82c; --cyan: #62d9d0;
-      --muted: #667269; --line: #d8ddd1; --dark-line: rgba(184,243,90,.16);
-      --mono: "DM Mono", monospace; --sans: "Manrope", sans-serif;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; font-family: var(--sans); color: var(--ink); background: var(--paper); }
-    a { color: inherit; text-decoration: none; }
-    button { font: inherit; }
-    .shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
-    .nav { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(7,17,14,.1); }
-    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -.03em; }
-    .mark { width: 34px; height: 34px; border: 1px solid var(--ink); display: grid; place-items: center; border-radius: 50%; position: relative; }
-    .mark::before, .mark::after { content:""; position:absolute; border-radius:50%; }
-    .mark::before { width:16px; height:16px; border:1.5px solid var(--lime-deep); }
-    .mark::after { width:5px; height:5px; background:var(--lime-deep); }
-    .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; font-weight: 700; }
-    .nav-links a:not(.nav-cta):hover { color: var(--lime-deep); }
-    .nav-cta, .button { display:inline-flex; align-items:center; justify-content:center; gap:9px; border-radius:6px; font-weight:800; }
-    .nav-cta { height:40px; padding:0 16px; background:var(--ink); color:white; }
-    .hero { min-height: 620px; display:grid; grid-template-columns: 1fr 1.08fr; align-items:center; gap:60px; padding:72px 0 82px; }
-    .eyebrow { display:flex; align-items:center; gap:9px; font:500 12px var(--mono); text-transform:uppercase; letter-spacing:.12em; color:#4f6957; }
-    .eyebrow::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--lime-deep); box-shadow:0 0 0 4px rgba(115,168,44,.12); }
-    h1 { max-width:660px; margin:22px 0 20px; font-size:clamp(52px,6vw,82px); line-height:.93; letter-spacing:-.075em; }
-    h1 em { font-style:normal; color:var(--lime-deep); }
-    .lead { max-width:580px; margin:0; color:#526158; font-size:18px; line-height:1.65; }
-    .hero-actions { display:flex; gap:12px; margin-top:32px; }
-    .button { height:50px; padding:0 20px; border:1px solid var(--ink); }
-    .button-primary { background:var(--ink); color:white; box-shadow:5px 5px 0 var(--lime); }
-    .button-secondary { background:transparent; }
-    .button:hover { transform:translateY(-2px); transition:.18s ease; }
-    .terminal { background:var(--ink); border-radius:12px; color:#edf7ed; min-height:430px; box-shadow:0 24px 60px rgba(7,17,14,.18); overflow:hidden; border:1px solid #1a2a23; }
-    .terminal-bar { height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--dark-line); font:500 11px var(--mono); color:#8ca095; }
-    .dots { display:flex; gap:7px; }.dots i { width:8px;height:8px;border-radius:50%;background:#45584e; }.dots i:first-child{background:var(--lime)}
-    .terminal-grid { display:grid; grid-template-columns:160px 1fr; min-height:376px; }
-    .telemetry { padding:18px; border-right:1px solid var(--dark-line); }
-    .telemetry-label { font:500 9px var(--mono); color:#71847a; text-transform:uppercase; letter-spacing:.12em; }
-    .metric { margin:16px 0 22px; }.metric strong { display:block; font:500 30px var(--mono); color:var(--lime); }.metric span { color:#819188; font:400 11px var(--mono); }
-    .signal-list { padding:18px 20px; }
-    .signal-head { display:grid; grid-template-columns:55px 70px 1fr; padding-bottom:12px; font:500 9px var(--mono); color:#71847a; border-bottom:1px solid var(--dark-line); }
-    .signal { display:grid; grid-template-columns:55px 70px 1fr; align-items:center; height:48px; border-bottom:1px solid rgba(184,243,90,.08); font:400 10px var(--mono); }
-    .method { color:var(--lime); }.code { color:var(--cyan); }.target { color:#bdcbbf; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .scan-line { height:2px; width:38%; background:var(--lime); margin:18px 0 0; opacity:.8; animation:scan 3.2s ease-in-out infinite alternate; }
-    @keyframes scan { to { width:82%; } }
-    .proof { background:var(--ink); color:white; }
-    .proof-inner { height:112px; display:grid; grid-template-columns:repeat(4,1fr); align-items:center; }
-    .proof-item { height:48px; display:flex; flex-direction:column; justify-content:center; border-right:1px solid var(--dark-line); padding-left:28px; }
-    .proof-item:first-child { padding-left:0; }.proof-item:last-child { border-right:0; }
-    .proof-item strong { font:500 18px var(--mono); color:var(--lime); }.proof-item span { margin-top:5px; font-size:12px; color:#91a098; }
-    .section { padding:110px 0; }.section-dark { background:var(--ink); color:white; }
-    .section-head { display:flex; align-items:end; justify-content:space-between; margin-bottom:48px; }
-    .kicker { font:500 11px var(--mono); text-transform:uppercase; letter-spacing:.14em; color:var(--lime-deep); }.section-dark .kicker { color:var(--lime); }
-    h2 { margin:12px 0 0; max-width:620px; font-size:clamp(38px,5vw,58px); line-height:1.02; letter-spacing:-.055em; }
-    .section-head p { max-width:360px; margin:0 0 4px; color:var(--muted); line-height:1.65; }.section-dark .section-head p { color:#91a098; }
-    .workflow { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); }
-    .section-dark .workflow { border-top-color:var(--dark-line); }
-    .step { min-height:260px; padding:30px 32px 30px 0; border-right:1px solid var(--line); }.step + .step { padding-left:32px; }.step:last-child { border-right:0; }
-    .section-dark .step { border-right-color:var(--dark-line); }
-    .step-no { font:500 12px var(--mono); color:var(--lime-deep); }.section-dark .step-no { color:var(--lime); }
-    .step-icon { width:46px;height:46px;margin:42px 0 24px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font:500 16px var(--mono); }.section-dark .step-icon { border-color:var(--dark-line);color:var(--lime); }
-    .step h3 { margin:0 0 10px;font-size:20px;letter-spacing:-.03em; }.step p { margin:0;color:var(--muted);line-height:1.65;font-size:14px; }.section-dark .step p { color:#91a098; }
-    .feature-grid { display:grid; grid-template-columns:1.25fr .75fr; gap:18px; }
-    .feature { min-height:250px; border:1px solid var(--line); border-radius:10px; padding:32px; background:var(--surface); }
-    .feature-wide { grid-row:span 2; min-height:518px; background:var(--ink); color:white; position:relative; overflow:hidden; }
-    .feature-wide::after { content:""; position:absolute; width:320px;height:320px;border:1px solid rgba(184,243,90,.16);border-radius:50%;right:-80px;bottom:-130px;box-shadow:0 0 0 46px rgba(184,243,90,.025),0 0 0 92px rgba(184,243,90,.018); }
-    .feature h3 { margin:18px 0 10px;font-size:23px;letter-spacing:-.035em; }.feature p { max-width:470px;margin:0;color:var(--muted);line-height:1.65 }.feature-wide p { color:#91a098; }
-    .feature-tag { font:500 10px var(--mono); text-transform:uppercase; letter-spacing:.12em; color:var(--lime-deep); }.feature-wide .feature-tag { color:var(--lime); }
-    .code-window { position:absolute;left:32px;right:-18px;bottom:32px;background:#101b17;border:1px solid var(--dark-line);border-radius:8px;padding:16px;font:400 12px var(--mono);line-height:1.9;z-index:1 }.code-window .prompt{color:var(--lime)}.code-window .flag{color:var(--cyan)}
-    .install { display:grid; grid-template-columns:.85fr 1.15fr; gap:70px; align-items:center; }.install p { color:var(--muted);line-height:1.7; }
-    .command { background:var(--ink);color:white;border-radius:10px;padding:22px 24px;font:400 13px var(--mono);display:flex;align-items:center;justify-content:space-between }.command code { overflow-wrap:anywhere }.copy { border:0;background:var(--lime);color:var(--ink);width:38px;height:38px;border-radius:5px;cursor:pointer;flex:none;margin-left:16px;font-weight:800 }.copy:focus-visible,.button:focus-visible,a:focus-visible { outline:3px solid var(--cyan);outline-offset:3px; }
-    .footer { border-top:1px solid var(--line);padding:38px 0 }.footer-inner{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}.footer-links{display:flex;gap:22px}.footer-links a:hover{color:var(--ink)}
-    .mobile-menu { display:none;border:0;background:transparent;font-size:22px; }
-    @media (max-width:900px){.nav-links>a:not(.nav-cta){display:none}.hero{grid-template-columns:1fr;gap:44px;padding-top:58px}.hero-copy{max-width:680px}.terminal{max-width:680px;width:100%}.feature-grid{grid-template-columns:1fr}.feature-wide{grid-row:auto}.proof-inner{grid-template-columns:repeat(2,1fr);height:auto}.proof-item{height:86px}.proof-item:nth(2){border-right:0}.proof-item:nth(n+3){border-top:1px solid var(--dark-line)}.proof-item:nth(3){padding-left:0}.install{grid-template-columns:1fr}.section-head{display:block}.section-head p{margin-top:20px}}
-    @media (max-width:620px){.shell{width:min(100% - 28px,1180px)}.nav{height:68px}.nav-cta{display:none}.mobile-menu{display:block}.hero{padding:44px 0 58px}.hero-actions{flex-direction:column}.button{width:100%}.terminal{min-height:390px}.terminal-grid{grid-template-columns:115px 1fr}.telemetry{padding:14px 10px}.signal-list{padding:16px 12px}.signal-head,.signal{grid-template-columns:42px 52px 1fr}.target{font-size:9px}.workflow{grid-template-columns:1fr}.step,.step+.step{border-right:0;border-bottom:1px solid var(--line);padding:26px 0}.section-dark .step,.section-dark .step+.step{border-bottom-color:var(--dark-line)}.step:last-child{border-bottom:0}.step-icon{margin:28px 0 18px}.section{padding:74px 0}.feature{padding:24px}.feature-wide{min-height:500px}.code-window{left:24px;right:-50px}.footer-inner{gap:24px;align-items:flex-start}.footer-links{flex-direction:column;gap:8px}.proof-item{padding-left:16px}.proof-item strong{font-size:16px}}
-    @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}.scan-line{animation:none}.button:hover{transform:none}}
+    :root{--bg:#080b0a;--panel:#0d1210;--panel2:#111713;--line:#233028;--text:#edf4ef;--muted:#91a098;--green:#b6ff5f;--green2:#7be44a;--cyan:#5ed5c8;--red:#ff675e;--mono:"JetBrains Mono",monospace;--display:"Space Grotesk",sans-serif}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--display);overflow-x:hidden}body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(182,255,95,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(182,255,95,.018) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(to bottom,#000 0,transparent 80%);mask-image:linear-gradient(to bottom,#000 0,transparent 80%)}a{color:inherit;text-decoration:none}button{font:inherit}.shell{width:min(1180px,calc(100% - 48px));margin-inline:auto}.mono{font-family:var(--mono)}
+    .nav-wrap{position:sticky;top:0;z-index:30;border-bottom:1px solid rgba(182,255,95,.09);background:rgba(8,11,10,.86);backdrop-filter:blur(18px)}.nav{height:72px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:-.03em}.brand-mark{width:38px;height:38px;display:grid;place-items:center;border:1px solid #314138;border-radius:50%;position:relative}.brand-mark::before{content:"";width:20px;height:20px;border:1px solid var(--green);border-radius:50%;box-shadow:inset 0 0 12px rgba(182,255,95,.12)}.brand-mark::after{content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}.nav-links{display:flex;align-items:center;gap:29px;font-size:13px;font-weight:600;color:#b9c5bd}.nav-links a:hover{color:var(--green)}.nav-cta{height:40px;display:flex;align-items:center;padding:0 15px;border:1px solid #3b4a40;border-radius:4px;color:var(--text)!important}.nav-cta:hover{border-color:var(--green);background:rgba(182,255,95,.05)}.mobile-toggle{display:none;background:none;border:0;color:white;font-size:22px}
+    .hero{min-height:680px;display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center;padding:76px 0 86px}.status{display:inline-flex;align-items:center;gap:9px;height:28px;padding:0 10px;border:1px solid #2b3a31;border-radius:999px;font:500 10px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:#aebeB4}.status i{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}h1{font-size:clamp(58px,7vw,92px);line-height:.88;letter-spacing:-.075em;margin:28px 0 24px}h1 span{display:block;color:var(--green)}.hero-copy>p{max-width:580px;color:var(--muted);font-size:18px;line-height:1.68;margin:0}.hero-actions{display:flex;gap:12px;margin-top:32px}.btn{height:50px;display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:0 19px;border-radius:4px;font-size:14px;font-weight:700}.btn-primary{background:var(--green);color:#0b110d;box-shadow:0 12px 36px rgba(182,255,95,.09)}.btn-primary:hover{background:#c9ff89}.btn-secondary{border:1px solid #34443a;color:#dfe8e2}.btn-secondary:hover{border-color:#718177}.btn:focus-visible,.copy:focus-visible,.mobile-toggle:focus-visible,a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+    .console{position:relative;border:1px solid #26332b;border-radius:10px;background:#0a0e0c;box-shadow:0 28px 80px rgba(0,0,0,.42);overflow:hidden}.console::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 75% 15%,rgba(182,255,95,.055),transparent 29%);pointer-events:none}.console-bar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid #26332b;font:500 10px var(--mono);color:#738178}.console-dots{display:flex;gap:7px}.console-dots i{width:8px;height:8px;border-radius:50%;background:#354139}.console-dots i:first-child{background:var(--green)}.console-body{display:grid;grid-template-columns:138px 1fr;height:390px}.console-side{padding:18px 14px;border-right:1px solid #26332b}.console-label{font:500 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#637269}.telemetry{margin-top:18px;padding-bottom:14px;border-bottom:1px solid #1d2922}.telemetry:last-of-type{border:0}.telemetry strong{display:block;color:var(--green);font:500 23px var(--mono)}.telemetry span{display:block;margin-top:4px;color:#6f7e75;font:400 9px var(--mono);text-transform:uppercase}.console-main{min-width:0;padding:18px}.table-title{display:flex;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #26332b;font:500 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#6f7e75}.target-row{display:grid;grid-template-columns:48px 48px 1fr 30px;align-items:center;height:48px;border-bottom:1px solid rgba(182,255,95,.065);font:400 10px var(--mono)}.method{color:var(--green)}.code{color:var(--cyan)}.target{color:#bbc7bf;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.valid{color:var(--green);text-align:right}.cursor{display:inline-block;width:7px;height:12px;margin-top:18px;background:var(--green);animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}
+    .ticker{border-top:1px solid #202922;border-bottom:1px solid #202922}.ticker-grid{height:94px;display:grid;grid-template-columns:repeat(4,1fr);align-items:center}.ticker-item{height:44px;padding-left:22px;border-right:1px solid #202922}.ticker-item:first-child{padding-left:0}.ticker-item:last-child{border:0}.ticker-item strong{display:block;font:500 14px var(--mono);color:var(--text)}.ticker-item span{display:block;margin-top:7px;font-size:11px;color:#75857b}
+    .section{padding:112px 0}.section-alt{border-top:1px solid #202922;border-bottom:1px solid #202922;background:#0a0e0c}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:48px}.kicker{font:500 10px var(--mono);letter-spacing:.15em;text-transform:uppercase;color:var(--green)}h2{max-width:720px;margin:12px 0 0;font-size:clamp(42px,5vw,64px);line-height:.98;letter-spacing:-.06em}.section-head p{max-width:360px;margin:0 0 4px;color:var(--muted);line-height:1.7;font-size:15px}
+    .workflow{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #26332b;border-radius:8px;overflow:hidden}.step{min-height:300px;padding:28px;border-right:1px solid #26332b;position:relative}.step:last-child{border:0}.step-no{font:500 11px var(--mono);color:#718078}.step-surface{height:68px;margin:38px 0 24px;display:flex;align-items:center}.step-surface svg{width:48px;height:48px;stroke:var(--green);fill:none;stroke-width:1.25}.step h3{font-size:21px;margin:0 0 10px}.step p{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+    .capability-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:16px}.capability{border:1px solid #26332b;border-radius:8px;background:var(--panel);overflow:hidden}.capability h3{margin:16px 0 9px;font-size:23px}.capability p{margin:0;color:var(--muted);line-height:1.65}.capability-main{grid-row:span 2;min-height:520px;padding:32px;position:relative}.capability-main::after{content:"";position:absolute;width:420px;height:420px;right:-180px;bottom:-210px;border:1px solid rgba(182,255,95,.11);border-radius:50%;box-shadow:0 0 0 46px rgba(182,255,95,.018),0 0 0 92px rgba(182,255,95,.012)}.capability-small{min-height:252px;padding:28px}.capability-tag{font:500 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--green)}.mini-terminal{position:absolute;left:32px;right:-20px;bottom:32px;border:1px solid #26332b;border-radius:7px;background:#080b0a;padding:18px;font:400 12px var(--mono);line-height:2;z-index:2}.mini-terminal .prompt{color:var(--green)}.mini-terminal .flag{color:var(--cyan)}
+    .install-grid{display:grid;grid-template-columns:.75fr 1.25fr;gap:64px;align-items:center}.install-copy p{color:var(--muted);line-height:1.75}.command-stack{display:grid;gap:10px}.command{min-height:62px;border:1px solid #26332b;border-radius:6px;background:#0d1210;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 12px 18px;font:400 12px var(--mono)}.command code{min-width:0;overflow-wrap:anywhere}.copy{width:38px;height:38px;flex:none;margin-left:14px;border:0;border-radius:4px;background:var(--green);color:#09110c;cursor:pointer}.command-label{display:flex;align-items:center;gap:8px;margin-bottom:8px;font:500 9px var(--mono);text-transform:uppercase;letter-spacing:.12em;color:#75857b}.command-label i{width:6px;height:6px;border-radius:50%;background:var(--green)}
+    .footer{border-top:1px solid #202922;padding:34px 0}.footer-inner{display:flex;justify-content:space-between;align-items:center}.footer-links{display:flex;gap:22px;font-size:12px;color:#7f8d84}.footer-links a:hover{color:var(--green)}
+    @media(max-width:960px){.shell{width:min(100% - 36px,1180px)}.hero{grid-template-columns:1fr;gap:44px;padding-top:58px}.hero-copy{max-width:700px}.console{max-width:720px}.capability-grid{grid-template-columns:1fr}.capability-main{grid-row:auto}.section-head{display:block}.section-head p{margin-top:18px}.install-grid{grid-template-columns:1fr;gap:32px}}
+    @media(max-width:680px){.shell{width:calc(100% - 28px)}.nav{height:66px}.nav-links{display:none}.mobile-toggle{display:block}.nav-links.open{display:flex;position:absolute;left:14px;right:14px;top:72px;padding:18px;flex-direction:column;align-items:flex-start;border:1px solid #26332b;border-radius:8px;background:#0d1210}.hero{min-height:auto;padding:44px 0 62px}h1{font-size:52px}.hero-copy>p{font-size:16px}.hero-actions{flex-direction:column}.btn{width:100%}.console-body{grid-template-columns:104px 1fr}.console-side{padding:14px 9px}.console-main{padding:14px 10px}.target-row{grid-template-columns:38px 42px 1fr 20px;font-size:8px}.ticker-grid{grid-template-columns:1fr 1fr;height:auto;padding:14px 0}.ticker-item{height:64px;padding:10px 12px}.ticker-item:nth-child(2){border:0}.ticker-item:nth-child(n+3){border-top:1px solid #202922}.ticker-item:nth-child(3){padding-left:0}.workflow{grid-template-columns:1fr}.step{min-height:240px;border-right:0;border-bottom:1px solid #26332b}.step:last-child{border:0}.step-surface{height:50px;margin:24px 0 18px}.section{padding:76px 0}.capability-main{min-height:500px;padding:24px}.mini-terminal{left:24px;right:-58px;bottom:24px}.capability-small{padding:24px}.command{font-size:10px}.footer-inner{gap:24px}.footer-links{flex-direction:column;gap:7px}.brand span:last-child{font-size:14px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.cursor{animation:none}}
   </style>
 </head>
 <body>
-  <header class="shell">
-    <nav class="nav" aria-label="Primary navigation">
-      <a class="brand" href="#top" aria-label="SQLMap Scout home"><span class="mark" aria-hidden="true"></span><span>SQLMap Scout</span></a>
-      <div class="nav-links">
-        <a href="#workflow">How it works</a>
-        <a href="#capabilities">Capabilities</a>
-        <a href="#install">Install</a>
-        <a class="nav-cta" href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">View on GitHub ↗</a>
-      </div>
-      <button class="mobile-menu" type="button" aria-label="Open navigation" onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
-    </nav>
-  </header>
-
+  <div class="nav-wrap"><nav class="shell nav" aria-label="Primary navigation"><a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span>SQLMap Scout</span></a><div class="nav-links" id="navLinks"><a href="#workflow">Process</a><a href="#capabilities">Capabilities</a><a href="#install">Install</a><a class="nav-cta" href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">GitHub ↗</a></div><button class="mobile-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navLinks">☰</button></nav></div>
   <main id="top">
     <section class="shell hero">
-      <div class="hero-copy">
-        <div class="eyebrow">Python security reconnaissance</div>
-        <h1>Find the <em>signal.</em><br>Skip the noise.</h1>
-        <p class="lead">SQLMap Scout crawls an authorized target, isolates parameterized links and dynamic forms, then exports clean targets for a focused sqlmap workflow.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="#install">Get started <span>→</span></a>
-          <a class="button button-secondary" href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">View source ↗</a>
-        </div>
-      </div>
-
-      <div class="terminal" aria-label="SQLMap Scout terminal interface preview">
-        <div class="terminal-bar"><div class="dots"><i></i><i></i><i></i></div><span>SQLMAP SCOUT / LIVE</span><span>80 PAGES</span></div>
-        <div class="terminal-grid">
-          <aside class="telemetry"><div class="telemetry-label">Telemetry</div><div class="metric"><strong>48</strong><span>pages crawled</span></div><div class="metric"><strong>7</strong><span>signal targets</span></div><div class="metric"><strong>41</strong><span>noise filtered</span></div></aside>
-          <div class="signal-list"><div class="signal-head"><span>METHOD</span><span>STATUS</span><span>TARGET</span></div>
-            <div class="signal"><span class="method">GET</span><span class="code">200</span><span class="target">/search?id=1</span></div>
-            <div class="signal"><span class="method">POST</span><span class="code">200</span><span class="target">/account/login</span></div>
-            <div class="signal"><span class="method">GET</span><span class="code">200</span><span class="target">/item/1042</span></div>
-            <div class="signal"><span class="method">GET</span><span class="code">200</span><span class="target">/products?category=1</span></div>
-            <div class="scan-line"></div>
-          </div>
-        </div>
-      </div>
+      <div class="hero-copy"><div class="status"><i></i> Authorized reconnaissance</div><h1>Find the<span>signal.</span></h1><p>A same-origin crawler that separates parameterized URLs and dynamic forms from static noise—then prepares clean targets for a focused SQLMap workflow.</p><div class="hero-actions"><a class="btn btn-primary" href="#install">Deploy locally <span>→</span></a><a class="btn btn-secondary" href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">View source ↗</a></div></div>
+      <div class="console" aria-label="SQLMap Scout live terminal preview"><div class="console-bar"><div class="console-dots"><i></i><i></i><i></i></div><span>sqlmap_scout.py · live</span><span>80 / 80</span></div><div class="console-body"><aside class="console-side"><div class="console-label">Telemetry</div><div class="telemetry"><strong>48</strong><span>Pages crawled</span></div><div class="telemetry"><strong>07</strong><span>Signals found</span></div><div class="telemetry"><strong>41</strong><span>Noise dropped</span></div></aside><div class="console-main"><div class="table-title"><span>Method</span><span>Verified targets</span></div><div class="target-row"><span class="method">GET</span><span class="code">200</span><span class="target">/search?id=1</span><span class="valid">✓</span></div><div class="target-row"><span class="method">POST</span><span class="code">200</span><span class="target">/account/login</span><span class="valid">✓</span></div><div class="target-row"><span class="method">GET</span><span class="code">200</span><span class="target">/item/1042</span><span class="valid">✓</span></div><div class="target-row"><span class="method">GET</span><span class="code">200</span><span class="target">/products?category=1</span><span class="valid">✓</span></div><div class="target-row"><span class="method">POST</span><span class="code">302</span><span class="target">/checkout</span><span class="valid">✓</span></div><span class="cursor"></span></div></div></div>
     </section>
-
-    <section class="proof" aria-label="Project characteristics">
-      <div class="shell proof-inner">
-        <div class="proof-item"><strong>Same-origin</strong><span>Scope-aware crawling</span></div>
-        <div class="proof-item"><strong>GET + POST</strong><span>Link and form discovery</span></div>
-        <div class="proof-item"><strong>TXT + JSON</strong><span>Flexible output</span></div>
-        <div class="proof-item"><strong>MIT</strong><span>Open-source license</span></div>
-      </div>
-    </section>
-
-    <section class="section" id="workflow">
-      <div class="shell"><div class="section-head"><div><div class="kicker">Recon workflow</div><h2>From web surface to clean targets.</h2></div><p>A bounded crawl that separates actionable endpoints from static assets and unrelated noise.</p></div>
-        <div class="workflow">
-          <article class="step"><div class="step-no">01</div><div class="step-icon">↗</div><h3>Define scope</h3><p>Start from an origin URL, then set crawl depth, page limits, concurrency, and request timeout.</p></article>
-          <article class="step"><div class="step-no">02</div><div class="step-icon">⌕</div><h3>Detect signals</h3><p>Identify query parameters, dynamic paths, GET forms, and POST forms while staying on the origin host.</p></article>
-          <article class="step"><div class="step-no">03</div><div class="step-icon">↓</div><h3>Export findings</h3><p>Save discovered links alone or include generated sqlmap commands in text or JSON format.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section-dark" id="capabilities">
-      <div class="shell"><div class="section-head"><div><div class="kicker">Capabilities</div><h2>Built for a focused TUI workflow.</h2></div><p>Runtime controls and live telemetry keep the crawl visible without turning reconnaissance into a noisy data dump.</p></div>
-        <div class="feature-grid">
-          <article class="feature feature-wide"><div class="feature-tag">Rich terminal interface</div><h3>See the crawl as it happens.</h3><p>A live layout reports queue depth, crawl progress, HTTP responses, filtered noise, and verified signal links.</p><div class="code-window"><span class="prompt">$</span> python sqlmap_scout.py <span class="flag">-u</span> https://example.com<br><span class="prompt">›</span> CRAWLED 48/80 &nbsp; SIGNAL 7 &nbsp; NOISE 41<br><span class="prompt">›</span> Exported (with-commands) → targets.txt</div></article>
-          <article class="feature"><div class="feature-tag">Scope control</div><h3>Stay on target.</h3><p>HTTP and HTTPS crawling remains bound to the starting host while static assets are excluded.</p></article>
-          <article class="feature"><div class="feature-tag">Output modes</div><h3>Keep or extend.</h3><p>Export signal URLs only, or pair each target with a generated sqlmap command in TXT or JSON.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="install">
-      <div class="shell install"><div><div class="kicker">Get started</div><h2>Run a bounded scout.</h2><p>Install the Rich terminal dependency, then point SQLMap Scout at a system you are authorized to test.</p></div>
-        <div><div class="command"><code id="install-command">pip install rich && python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export</code><button class="copy" type="button" aria-label="Copy install command" data-copy="pip install rich && python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export">⧉</button></div></div>
-      </div>
-    </section>
+    <section class="ticker" aria-label="Core characteristics"><div class="shell ticker-grid"><div class="ticker-item"><strong>Same-origin</strong><span>Scope-controlled crawl</span></div><div class="ticker-item"><strong>GET + POST</strong><span>Links and forms</span></div><div class="ticker-item"><strong>TXT + JSON</strong><span>Portable findings</span></div><div class="ticker-item"><strong>MIT licensed</strong><span>Open source</span></div></div></section>
+    <section class="section" id="workflow"><div class="shell"><div class="section-head"><div><div class="kicker">Reconnaissance pipeline</div><h2>Move from surface<br>to signal.</h2></div><p>Every stage is bounded, inspectable, and designed to leave static assets and unrelated hosts behind.</p></div><div class="workflow"><article class="step"><div class="step-no">01 / SCOPE</div><div class="step-surface"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14"/><circle cx="24" cy="24" r="4"/><path d="M24 4v8M24 36v8M4 24h8M36 24h8"/></svg></div><h3>Set boundaries</h3><p>Define the origin URL, crawl depth, page limit, concurrency, timeout, and output destination.</p></article><article class="step"><div class="step-no">02 / DETECT</div><div class="step-surface"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="21" cy="21" r="13"/><path d="M31 31l12 12M13 21h16M21 13v16"/></svg></div><h3>Extract signals</h3><p>Record query parameters, dynamic routes, GET forms, and POST form fields without broad exploitation.</p></article><article class="step"><div class="step-no">03 / EXPORT</div><div class="step-surface"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6v25M15 22l9 9 9-9M8 38h32"/></svg></div><h3>Prepare targets</h3><p>Export links only or append generated SQLMap commands in human-readable text or structured JSON.</p></article></div></div></section>
+    <section class="section section-alt" id="capabilities"><div class="shell"><div class="section-head"><div><div class="kicker">Operational view</div><h2>A terminal built for<br>decisions.</h2></div><p>Live telemetry turns crawl behavior into visible progress instead of hiding the process behind a silent batch job.</p></div><div class="capability-grid"><article class="capability capability-main"><div class="capability-tag">Rich terminal interface</div><h3>Observe every pass.</h3><p>Track queue depth, page progress, HTTP status counts, filtered noise, signal targets, and export state in one live layout.</p><div class="mini-terminal"><span class="prompt">$</span> python sqlmap_scout.py <span class="flag">-u</span> https://target.local<br><span class="prompt">›</span> CRAWLED 48/80 &nbsp; SIGNAL 07 &nbsp; NOISE 41<br><span class="prompt">›</span> EXPORT targets.json <span class="prompt">✓</span></div></article><article class="capability capability-small"><div class="capability-tag">Scope engine</div><h3>Stay inside the origin.</h3><p>Reject cross-host, unsupported-scheme, and static asset paths before they enter the crawl queue.</p></article><article class="capability capability-small"><div class="capability-tag">Export modes</div><h3>Keep the output usable.</h3><p>Choose URLs only or pair each finding with its method, parameters, reason, status, and generated command.</p></article></div></div></section>
+    <section class="section" id="install"><div class="shell install-grid"><div class="install-copy"><div class="kicker">Launch sequence</div><h2>Run your<br>next scout.</h2><p>Install the Rich dependency and point the crawler at a host you own or have explicit permission to assess.</p></div><div class="command-stack"><div><div class="command-label"><i></i>Install dependency</div><div class="command"><code>pip install rich</code><button class="copy" type="button" aria-label="Copy install command" data-copy="pip install rich">⧉</button></div></div><div><div class="command-label"><i></i>Start a bounded scout</div><div class="command"><code>python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export</code><button class="copy" type="button" aria-label="Copy scout command" data-copy="python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export">⧉</button></div></div></div></div></section>
   </main>
-
-  <footer class="footer"><div class="shell footer-inner"><div class="brand"><span class="mark" aria-hidden="true"></span><span>SQLMap Scout</span></div><div class="footer-links"><a href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">Repository</a><a href="https://github.com/dntaskmehow/sqlmap-scout/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a><span>© 2026</span></div></div></footer>
-
+  <footer class="footer"><div class="shell footer-inner"><a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span>SQLMap Scout</span></a><div class="footer-links"><a href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">Repository</a><a href="https://github.com/dntaskmehow/sqlmap-scout/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a><span>© 2026</span></div></div></footer>
   <script>
-    document.querySelectorAll('[data-copy]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(button.dataset.copy);
-          button.textContent = '✓';
-          button.setAttribute('aria-label', 'Copied');
-          setTimeout(() => { button.textContent = '⧉'; button.setAttribute('aria-label', 'Copy install command'); }, 1600);
-        } catch (_) {
-          button.textContent = '!';
-        }
-      });
-    });
+    const toggle=document.querySelector('.mobile-toggle'),links=document.querySelector('#navLinks');toggle.addEventListener('click',()=>{const open=links.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open))});links.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{links.classList.remove('open');toggle.setAttribute('aria-expanded','false')}));
+    document.querySelectorAll('[data-copy]').forEach(button=>button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.copy);button.textContent='✓';button.setAttribute('aria-label','Copied');setTimeout(()=>{button.textContent='⧉';button.setAttribute('aria-label','Copy command')},1600)}catch(error){button.textContent='!'}}));
   </script>
 </body>
 </html>
