@@ -4,14 +4,6 @@ A terminal-first reconnaissance crawler that finds parameterized URLs and dynami
 
 ## Landing page
 
-Open `index.html` directly or serve it locally:
-
-```bash
-python -m http.server 4173
-```
-
-Visit `http://localhost:4173`.
-
 ## Install
 
 ```bash
