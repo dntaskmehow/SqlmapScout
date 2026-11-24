@@ -1,5 +1,7 @@
 # SQLMap Scout
 
+ Researcher: dontaskmehow
+
 A terminal-first reconnaissance crawler that finds parameterized URLs and dynamic forms on an authorized target.
 
 ## Landing page
