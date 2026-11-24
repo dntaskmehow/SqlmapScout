@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07110e">
+  <meta name="description" content="SQLMap Scout crawls a target, identifies parameterized and dynamic endpoints, and exports clean targets for focused SQLMap testing.">
+  <title>SQLMap Scout — Focus the signal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #07110e; --paper: #f2f4ea; --surface: #fcfdf7;
+      --lime: #b8f35a; --lime-deep: #73a82c; --cyan: #62d9d0;
+      --muted: #667269; --line: #d8ddd1; --dark-line: rgba(184,243,90,.16);
+      --mono: "DM Mono", monospace; --sans: "Manrope", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: var(--sans); color: var(--ink); background: var(--paper); }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; }
+    .shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+    .nav { height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(7,17,14,.1); }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -.03em; }
+    .mark { width: 34px; height: 34px; border: 1px solid var(--ink); display: grid; place-items: center; border-radius: 50%; position: relative; }
+    .mark::before, .mark::after { content:""; position:absolute; border-radius:50%; }
+    .mark::before { width:16px; height:16px; border:1.5px solid var(--lime-deep); }
+    .mark::after { width:5px; height:5px; background:var(--lime-deep); }
+    .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; font-weight: 700; }
+    .nav-links a:not(.nav-cta):hover { color: var(--lime-deep); }
+    .nav-cta, .button { display:inline-flex; align-items:center; justify-content:center; gap:9px; border-radius:6px; font-weight:800; }
+    .nav-cta { height:40px; padding:0 16px; background:var(--ink); color:white; }
+    .hero { min-height: 620px; display:grid; grid-template-columns: 1fr 1.08fr; align-items:center; gap:60px; padding:72px 0 82px; }
+    .eyebrow { display:flex; align-items:center; gap:9px; font:500 12px var(--mono); text-transform:uppercase; letter-spacing:.12em; color:#4f6957; }
+    .eyebrow::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--lime-deep); box-shadow:0 0 0 4px rgba(115,168,44,.12); }
+    h1 { max-width:660px; margin:22px 0 20px; font-size:clamp(52px,6vw,82px); line-height:.93; letter-spacing:-.075em; }
+    h1 em { font-style:normal; color:var(--lime-deep); }
+    .lead { max-width:580px; margin:0; color:#526158; font-size:18px; line-height:1.65; }
+    .hero-actions { display:flex; gap:12px; margin-top:32px; }
+    .button { height:50px; padding:0 20px; border:1px solid var(--ink); }
+    .button-primary { background:var(--ink); color:white; box-shadow:5px 5px 0 var(--lime); }
+    .button-secondary { background:transparent; }
+    .button:hover { transform:translateY(-2px); transition:.18s ease; }
+    .terminal { background:var(--ink); border-radius:12px; color:#edf7ed; min-height:430px; box-shadow:0 24px 60px rgba(7,17,14,.18); overflow:hidden; border:1px solid #1a2a23; }
+    .terminal-bar { height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--dark-line); font:500 11px var(--mono); color:#8ca095; }
+    .dots { display:flex; gap:7px; }.dots i { width:8px;height:8px;border-radius:50%;background:#45584e; }.dots i:first-child{background:var(--lime)}
+    .terminal-grid { display:grid; grid-template-columns:160px 1fr; min-height:376px; }
+    .telemetry { padding:18px; border-right:1px solid var(--dark-line); }
+    .telemetry-label { font:500 9px var(--mono); color:#71847a; text-transform:uppercase; letter-spacing:.12em; }
+    .metric { margin:16px 0 22px; }.metric strong { display:block; font:500 30px var(--mono); color:var(--lime); }.metric span { color:#819188; font:400 11px var(--mono); }
+    .signal-list { padding:18px 20px; }
+    .signal-head { display:grid; grid-template-columns:55px 70px 1fr; padding-bottom:12px; font:500 9px var(--mono); color:#71847a; border-bottom:1px solid var(--dark-line); }
+    .signal { display:grid; grid-template-columns:55px 70px 1fr; align-items:center; height:48px; border-bottom:1px solid rgba(184,243,90,.08); font:400 10px var(--mono); }
+    .method { color:var(--lime); }.code { color:var(--cyan); }.target { color:#bdcbbf; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .scan-line { height:2px; width:38%; background:var(--lime); margin:18px 0 0; opacity:.8; animation:scan 3.2s ease-in-out infinite alternate; }
+    @keyframes scan { to { width:82%; } }
+    .proof { background:var(--ink); color:white; }
+    .proof-inner { height:112px; display:grid; grid-template-columns:repeat(4,1fr); align-items:center; }
+    .proof-item { height:48px; display:flex; flex-direction:column; justify-content:center; border-right:1px solid var(--dark-line); padding-left:28px; }
+    .proof-item:first-child { padding-left:0; }.proof-item:last-child { border-right:0; }
+    .proof-item strong { font:500 18px var(--mono); color:var(--lime); }.proof-item span { margin-top:5px; font-size:12px; color:#91a098; }
+    .section { padding:110px 0; }.section-dark { background:var(--ink); color:white; }
+    .section-head { display:flex; align-items:end; justify-content:space-between; margin-bottom:48px; }
+    .kicker { font:500 11px var(--mono); text-transform:uppercase; letter-spacing:.14em; color:var(--lime-deep); }.section-dark .kicker { color:var(--lime); }
+    h2 { margin:12px 0 0; max-width:620px; font-size:clamp(38px,5vw,58px); line-height:1.02; letter-spacing:-.055em; }
+    .section-head p { max-width:360px; margin:0 0 4px; color:var(--muted); line-height:1.65; }.section-dark .section-head p { color:#91a098; }
+    .workflow { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); }
+    .section-dark .workflow { border-top-color:var(--dark-line); }
+    .step { min-height:260px; padding:30px 32px 30px 0; border-right:1px solid var(--line); }.step + .step { padding-left:32px; }.step:last-child { border-right:0; }
+    .section-dark .step { border-right-color:var(--dark-line); }
+    .step-no { font:500 12px var(--mono); color:var(--lime-deep); }.section-dark .step-no { color:var(--lime); }
+    .step-icon { width:46px;height:46px;margin:42px 0 24px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font:500 16px var(--mono); }.section-dark .step-icon { border-color:var(--dark-line);color:var(--lime); }
+    .step h3 { margin:0 0 10px;font-size:20px;letter-spacing:-.03em; }.step p { margin:0;color:var(--muted);line-height:1.65;font-size:14px; }.section-dark .step p { color:#91a098; }
+    .feature-grid { display:grid; grid-template-columns:1.25fr .75fr; gap:18px; }
+    .feature { min-height:250px; border:1px solid var(--line); border-radius:10px; padding:32px; background:var(--surface); }
+    .feature-wide { grid-row:span 2; min-height:518px; background:var(--ink); color:white; position:relative; overflow:hidden; }
+    .feature-wide::after { content:""; position:absolute; width:320px;height:320px;border:1px solid rgba(184,243,90,.16);border-radius:50%;right:-80px;bottom:-130px;box-shadow:0 0 0 46px rgba(184,243,90,.025),0 0 0 92px rgba(184,243,90,.018); }
+    .feature h3 { margin:18px 0 10px;font-size:23px;letter-spacing:-.035em; }.feature p { max-width:470px;margin:0;color:var(--muted);line-height:1.65 }.feature-wide p { color:#91a098; }
+    .feature-tag { font:500 10px var(--mono); text-transform:uppercase; letter-spacing:.12em; color:var(--lime-deep); }.feature-wide .feature-tag { color:var(--lime); }
+    .code-window { position:absolute;left:32px;right:-18px;bottom:32px;background:#101b17;border:1px solid var(--dark-line);border-radius:8px;padding:16px;font:400 12px var(--mono);line-height:1.9;z-index:1 }.code-window .prompt{color:var(--lime)}.code-window .flag{color:var(--cyan)}
+    .install { display:grid; grid-template-columns:.85fr 1.15fr; gap:70px; align-items:center; }.install p { color:var(--muted);line-height:1.7; }
+    .command { background:var(--ink);color:white;border-radius:10px;padding:22px 24px;font:400 13px var(--mono);display:flex;align-items:center;justify-content:space-between }.command code { overflow-wrap:anywhere }.copy { border:0;background:var(--lime);color:var(--ink);width:38px;height:38px;border-radius:5px;cursor:pointer;flex:none;margin-left:16px;font-weight:800 }.copy:focus-visible,.button:focus-visible,a:focus-visible { outline:3px solid var(--cyan);outline-offset:3px; }
+    .footer { border-top:1px solid var(--line);padding:38px 0 }.footer-inner{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}.footer-links{display:flex;gap:22px}.footer-links a:hover{color:var(--ink)}
+    .mobile-menu { display:none;border:0;background:transparent;font-size:22px; }
+    @media (max-width:900px){.nav-links>a:not(.nav-cta){display:none}.hero{grid-template-columns:1fr;gap:44px;padding-top:58px}.hero-copy{max-width:680px}.terminal{max-width:680px;width:100%}.feature-grid{grid-template-columns:1fr}.feature-wide{grid-row:auto}.proof-inner{grid-template-columns:repeat(2,1fr);height:auto}.proof-item{height:86px}.proof-item:nth(2){border-right:0}.proof-item:nth(n+3){border-top:1px solid var(--dark-line)}.proof-item:nth(3){padding-left:0}.install{grid-template-columns:1fr}.section-head{display:block}.section-head p{margin-top:20px}}
+    @media (max-width:620px){.shell{width:min(100% - 28px,1180px)}.nav{height:68px}.nav-cta{display:none}.mobile-menu{display:block}.hero{padding:44px 0 58px}.hero-actions{flex-direction:column}.button{width:100%}.terminal{min-height:390px}.terminal-grid{grid-template-columns:115px 1fr}.telemetry{padding:14px 10px}.signal-list{padding:16px 12px}.signal-head,.signal{grid-template-columns:42px 52px 1fr}.target{font-size:9px}.workflow{grid-template-columns:1fr}.step,.step+.step{border-right:0;border-bottom:1px solid var(--line);padding:26px 0}.section-dark .step,.section-dark .step+.step{border-bottom-color:var(--dark-line)}.step:last-child{border-bottom:0}.step-icon{margin:28px 0 18px}.section{padding:74px 0}.feature{padding:24px}.feature-wide{min-height:500px}.code-window{left:24px;right:-50px}.footer-inner{gap:24px;align-items:flex-start}.footer-links{flex-direction:column;gap:8px}.proof-item{padding-left:16px}.proof-item strong{font-size:16px}}
+    @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}.scan-line{animation:none}.button:hover{transform:none}}
+  </style>
+</head>
+<body>
+  <header class="shell">
+    <nav class="nav" aria-label="Primary navigation">
+      <a class="brand" href="#top" aria-label="SQLMap Scout home"><span class="mark" aria-hidden="true"></span><span>SQLMap Scout</span></a>
+      <div class="nav-links">
+        <a href="#workflow">How it works</a>
+        <a href="#capabilities">Capabilities</a>
+        <a href="#install">Install</a>
+        <a class="nav-cta" href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">View on GitHub ↗</a>
+      </div>
+      <button class="mobile-menu" type="button" aria-label="Open navigation" onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="shell hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Python security reconnaissance</div>
+        <h1>Find the <em>signal.</em><br>Skip the noise.</h1>
+        <p class="lead">SQLMap Scout crawls an authorized target, isolates parameterized links and dynamic forms, then exports clean targets for a focused sqlmap workflow.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#install">Get started <span>→</span></a>
+          <a class="button button-secondary" href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">View source ↗</a>
+        </div>
+      </div>
+
+      <div class="terminal" aria-label="SQLMap Scout terminal interface preview">
+        <div class="terminal-bar"><div class="dots"><i></i><i></i><i></i></div><span>SQLMAP SCOUT / LIVE</span><span>80 PAGES</span></div>
+        <div class="terminal-grid">
+          <aside class="telemetry"><div class="telemetry-label">Telemetry</div><div class="metric"><strong>48</strong><span>pages crawled</span></div><div class="metric"><strong>7</strong><span>signal targets</span></div><div class="metric"><strong>41</strong><span>noise filtered</span></div></aside>
+          <div class="signal-list"><div class="signal-head"><span>METHOD</span><span>STATUS</span><span>TARGET</span></div>
+            <div class="signal"><span class="method">GET</span><span class="code">200</span><span class="target">/search?id=1</span></div>
+            <div class="signal"><span class="method">POST</span><span class="code">200</span><span class="target">/account/login</span></div>
+            <div class="signal"><span class="method">GET</span><span class="code">200</span><span class="target">/item/1042</span></div>
+            <div class="signal"><span class="method">GET</span><span class="code">200</span><span class="target">/products?category=1</span></div>
+            <div class="scan-line"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof" aria-label="Project characteristics">
+      <div class="shell proof-inner">
+        <div class="proof-item"><strong>Same-origin</strong><span>Scope-aware crawling</span></div>
+        <div class="proof-item"><strong>GET + POST</strong><span>Link and form discovery</span></div>
+        <div class="proof-item"><strong>TXT + JSON</strong><span>Flexible output</span></div>
+        <div class="proof-item"><strong>MIT</strong><span>Open-source license</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="workflow">
+      <div class="shell"><div class="section-head"><div><div class="kicker">Recon workflow</div><h2>From web surface to clean targets.</h2></div><p>A bounded crawl that separates actionable endpoints from static assets and unrelated noise.</p></div>
+        <div class="workflow">
+          <article class="step"><div class="step-no">01</div><div class="step-icon">↗</div><h3>Define scope</h3><p>Start from an origin URL, then set crawl depth, page limits, concurrency, and request timeout.</p></article>
+          <article class="step"><div class="step-no">02</div><div class="step-icon">⌕</div><h3>Detect signals</h3><p>Identify query parameters, dynamic paths, GET forms, and POST forms while staying on the origin host.</p></article>
+          <article class="step"><div class="step-no">03</div><div class="step-icon">↓</div><h3>Export findings</h3><p>Save discovered links alone or include generated sqlmap commands in text or JSON format.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-dark" id="capabilities">
+      <div class="shell"><div class="section-head"><div><div class="kicker">Capabilities</div><h2>Built for a focused TUI workflow.</h2></div><p>Runtime controls and live telemetry keep the crawl visible without turning reconnaissance into a noisy data dump.</p></div>
+        <div class="feature-grid">
+          <article class="feature feature-wide"><div class="feature-tag">Rich terminal interface</div><h3>See the crawl as it happens.</h3><p>A live layout reports queue depth, crawl progress, HTTP responses, filtered noise, and verified signal links.</p><div class="code-window"><span class="prompt">$</span> python sqlmap_scout.py <span class="flag">-u</span> https://example.com<br><span class="prompt">›</span> CRAWLED 48/80 &nbsp; SIGNAL 7 &nbsp; NOISE 41<br><span class="prompt">›</span> Exported (with-commands) → targets.txt</div></article>
+          <article class="feature"><div class="feature-tag">Scope control</div><h3>Stay on target.</h3><p>HTTP and HTTPS crawling remains bound to the starting host while static assets are excluded.</p></article>
+          <article class="feature"><div class="feature-tag">Output modes</div><h3>Keep or extend.</h3><p>Export signal URLs only, or pair each target with a generated sqlmap command in TXT or JSON.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="install">
+      <div class="shell install"><div><div class="kicker">Get started</div><h2>Run a bounded scout.</h2><p>Install the Rich terminal dependency, then point SQLMap Scout at a system you are authorized to test.</p></div>
+        <div><div class="command"><code id="install-command">pip install rich && python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export</code><button class="copy" type="button" aria-label="Copy install command" data-copy="pip install rich && python sqlmap_scout.py -u https://example.com --max-pages 80 --auto-export">⧉</button></div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="shell footer-inner"><div class="brand"><span class="mark" aria-hidden="true"></span><span>SQLMap Scout</span></div><div class="footer-links"><a href="https://github.com/dntaskmehow/sqlmap-scout" target="_blank" rel="noreferrer">Repository</a><a href="https://github.com/dntaskmehow/sqlmap-scout/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT License</a><span>© 2026</span></div></div></footer>
+
+  <script>
+    document.querySelectorAll('[data-copy]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.copy);
+          button.textContent = '✓';
+          button.setAttribute('aria-label', 'Copied');
+          setTimeout(() => { button.textContent = '⧉'; button.setAttribute('aria-label', 'Copy install command'); }, 1600);
+        } catch (_) {
+          button.textContent = '!';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
