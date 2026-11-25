@@ -9,6 +9,12 @@ A terminal-first reconnaissance crawler that finds parameterized URLs and dynami
 ## Install
 
 ```bash
+# Install virtual environment
+
+python3 -m venv venv
+source venv/bin/activate  
+
+```bash
 pip install rich
 ```
 
